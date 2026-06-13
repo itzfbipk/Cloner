@@ -170,7 +170,7 @@ export default function HomePage() {
                 </div>
                 <div className="stat-div" />
                 <div className="stat">
-                  <span className="stat-value">8</span>
+                  <span className="stat-value">25</span>
                   <span className="stat-label">Max Pages</span>
                 </div>
                 <div className="stat-div" />
