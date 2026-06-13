@@ -1,9 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import UrlInput from '@/components/UrlInput';
-import ProgressTracker from '@/components/ProgressTracker';
-import DownloadCard from '@/components/DownloadCard';
 
 type AppState = 'idle' | 'cloning' | 'done' | 'error';
 
@@ -13,227 +10,237 @@ interface ProgressState {
   percent: number;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
 export default function HomePage() {
-  const [appState, setAppState] = useState<AppState>('idle');
+  const [state, setState] = useState<AppState>('idle');
+  const [url, setUrl] = useState('');
+  const [exportType, setExportType] = useState<'nextjs' | 'html'>('nextjs');
+  const [progress, setProgress] = useState<ProgressState>({ status: 'queued', message: '', percent: 0 });
   const [cloneUrl, setCloneUrl] = useState('');
-  const [jobId, setJobId] = useState('');
-  const [progress, setProgress] = useState<ProgressState>({
-    status: 'queued',
-    message: 'Starting...',
-    percent: 0,
-  });
-  const [downloadInfo, setDownloadInfo] = useState<{
-    url: string;
-    filename: string;
-  } | null>(null);
+  const [downloadInfo, setDownloadInfo] = useState<{ url: string; filename: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [fieldError, setFieldError] = useState('');
   const esRef = useRef<EventSource | null>(null);
 
   const cleanup = useCallback(() => {
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-    }
+    esRef.current?.close();
+    esRef.current = null;
   }, []);
 
-  useEffect(() => {
-    return cleanup;
-  }, [cleanup]);
+  useEffect(() => cleanup, [cleanup]);
 
-  async function handleClone(url: string, exportType: 'nextjs' | 'html') {
-    cleanup();
-    setCloneUrl(url);
-    setAppState('cloning');
-    setErrorMsg('');
-    setDownloadInfo(null);
-    setProgress({ status: 'queued', message: 'Starting clone...', percent: 2 });
-
-    try {
-      // POST to start the job
-      const response = await fetch(`${BACKEND_URL}/clone`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, exportType }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error || `Server error: ${response.status}`);
+  function validate(v: string) {
+    if (!v.trim()) return 'Enter a URL to clone';
+    try { new URL(v.trim()); return ''; } catch {
+      try { new URL('https://' + v.trim()); return ''; } catch {
+        return 'Invalid URL format';
       }
-
-      const { jobId: newJobId } = (await response.json()) as { jobId: string };
-      setJobId(newJobId);
-
-      // Connect to SSE stream
-      const es = new EventSource(`${BACKEND_URL}/clone/${newJobId}/stream`);
-      esRef.current = es;
-
-      es.addEventListener('progress', (e: MessageEvent) => {
-        const data = JSON.parse(e.data) as ProgressState;
-        setProgress(data);
-      });
-
-      es.addEventListener('complete', (e: MessageEvent) => {
-        const data = JSON.parse(e.data) as { downloadUrl: string; filename: string };
-        setDownloadInfo({ url: data.downloadUrl, filename: data.filename });
-        setAppState('done');
-        cleanup();
-      });
-
-      es.addEventListener('error', (e: MessageEvent | Event) => {
-        let msg = 'An unexpected error occurred';
-        if (e instanceof MessageEvent) {
-          try {
-            msg = (JSON.parse(e.data) as { message: string }).message;
-          } catch { /* ignore */ }
-        }
-        setErrorMsg(msg);
-        setAppState('error');
-        cleanup();
-      });
-
-      es.onerror = (e) => {
-        // Only treat as error if we're still cloning (not already done/errored)
-        setAppState((prev) => {
-          if (prev === 'cloning') {
-            setErrorMsg('Lost connection to server. Please try again.');
-            cleanup();
-            return 'error';
-          }
-          return prev;
-        });
-      };
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to start clone job');
-      setAppState('error');
     }
   }
 
-  function handleReset() {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = url.trim();
+    const err = validate(trimmed);
+    if (err) { setFieldError(err); return; }
+    setFieldError('');
+    const finalUrl = trimmed.startsWith('http') ? trimmed : 'https://' + trimmed;
+
     cleanup();
-    setAppState('idle');
-    setCloneUrl('');
-    setJobId('');
-    setDownloadInfo(null);
-    setErrorMsg('');
+    setCloneUrl(finalUrl);
+    setState('cloning');
+    setProgress({ status: 'queued', message: 'Starting...', percent: 2 });
+
+    try {
+      const res = await fetch(`${BACKEND}/clone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: finalUrl, exportType }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error((d as { error?: string }).error || `Server error: ${res.status}`);
+      }
+      const { jobId } = (await res.json()) as { jobId: string };
+      const es = new EventSource(`${BACKEND}/clone/${jobId}/stream`);
+      esRef.current = es;
+      es.addEventListener('progress', (e: MessageEvent) => setProgress(JSON.parse(e.data)));
+      es.addEventListener('complete', (e: MessageEvent) => {
+        const d = JSON.parse(e.data) as { downloadUrl: string; filename: string };
+        setDownloadInfo({ url: d.downloadUrl, filename: d.filename });
+        setState('done'); cleanup();
+      });
+      es.addEventListener('error', (e: MessageEvent | Event) => {
+        let msg = 'Unexpected error';
+        if (e instanceof MessageEvent) try { msg = JSON.parse(e.data).message; } catch { }
+        setErrorMsg(msg); setState('error'); cleanup();
+      });
+      es.onerror = () => setState(prev => {
+        if (prev === 'cloning') { setErrorMsg('Lost connection. Try again.'); cleanup(); return 'error'; }
+        return prev;
+      });
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to start');
+      setState('error');
+    }
+  }
+
+  function reset() {
+    cleanup(); setState('idle'); setUrl(''); setCloneUrl('');
+    setDownloadInfo(null); setErrorMsg(''); setFieldError('');
     setProgress({ status: 'queued', message: '', percent: 0 });
   }
 
+  const hostname = (() => { try { return new URL(cloneUrl).hostname; } catch { return cloneUrl; } })();
+  const fullDownload = downloadInfo ? `${BACKEND}${downloadInfo.url}` : '';
+  const previewUrl = fullDownload.replace('/download', '/preview/');
+
   return (
     <>
-      {/* Minimal luxury background */}
-      <div className="bg-ambient" aria-hidden="true" />
-      <div className="noise-overlay" aria-hidden="true" />
+      <div className="bg-grid" aria-hidden="true" />
+      <div className="bg-glow" aria-hidden="true" />
 
-      <main className="main-layout">
-        {/* Header */}
-        <header className="header">
-          <div className="logo">
-            <div className="logo-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                <path d="M2 17l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                <path d="M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="logo-text">WebCloner</span>
+      <div className="page">
+        {/* Nav */}
+        <nav className="nav">
+          <div className="nav-brand">
+            <span className="brand-dot" />
+            WebCloner
           </div>
-          <div className="header-badge">
-            <span className="badge-dot" />
-            AI-Powered
-          </div>
-        </header>
+          <span className="nav-status">v1.0</span>
+        </nav>
 
-        {/* Hero */}
-        <section className="hero" aria-labelledby="hero-heading">
-          <div className="hero-tag">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            Zero API keys required
-          </div>
-          <h1 id="hero-heading" className="hero-title">
-            Copy any website.
-          </h1>
-          <p className="hero-subtitle">
-            Transform any public URL into a clean, functional Next.js or HTML codebase in seconds.
-          </p>
-        </section>
+        {/* Hero / Main */}
+        <main className="hero">
+          {state === 'idle' && (
+            <>
+              <p className="hero-eyebrow">Playwright · Next.js · TypeScript</p>
+              <h1 className="hero-title">
+                Clone any<br /><em>website.</em>
+              </h1>
+              <p className="hero-sub">
+                Paste a URL. Get a fully structured, downloadable codebase in seconds.
+              </p>
 
-        {/* Content area */}
-        <section className="content-area">
-          {appState === 'idle' && (
-            <div className="card glass-card">
-              <UrlInput onClone={handleClone} isLoading={false} />
-              <div className="features-row">
-                <span className="feature-chip">Full CSS & Styles</span>
-                <span className="feature-chip" style={{ opacity: 0.3 }}>•</span>
-                <span className="feature-chip">Images & Assets</span>
-                <span className="feature-chip" style={{ opacity: 0.3 }}>•</span>
-                <span className="feature-chip">Multi-page</span>
-                <span className="feature-chip" style={{ opacity: 0.3 }}>•</span>
-                <span className="feature-chip">ZIP Export</span>
+              <div className="input-panel">
+                <form onSubmit={handleSubmit}>
+                  <div className="url-row">
+                    <span className="url-prefix">https://</span>
+                    <input
+                      id="url-input"
+                      className="url-field"
+                      type="text"
+                      placeholder="example.com"
+                      value={url}
+                      onChange={e => { setUrl(e.target.value); setFieldError(''); }}
+                      autoFocus
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <button type="submit" className="go-btn" id="clone-btn">
+                      Clone
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {fieldError && <p className="field-error">{fieldError}</p>}
+                </form>
+
+                <div className="format-row">
+                  <span className="format-label">Export as</span>
+                  <button className={`fmt-btn ${exportType === 'nextjs' ? 'active' : ''}`} onClick={() => setExportType('nextjs')}>
+                    Next.js
+                  </button>
+                  <button className={`fmt-btn ${exportType === 'html' ? 'active' : ''}`} onClick={() => setExportType('html')}>
+                    HTML
+                  </button>
+                </div>
+              </div>
+
+              <div className="stats-row">
+                <div className="stat">
+                  <span className="stat-value">CSS</span>
+                  <span className="stat-label">Preserved</span>
+                </div>
+                <div className="stat-div" />
+                <div className="stat">
+                  <span className="stat-value">JS</span>
+                  <span className="stat-label">Included</span>
+                </div>
+                <div className="stat-div" />
+                <div className="stat">
+                  <span className="stat-value">8</span>
+                  <span className="stat-label">Max Pages</span>
+                </div>
+                <div className="stat-div" />
+                <div className="stat">
+                  <span className="stat-value">ZIP</span>
+                  <span className="stat-label">Output</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {state === 'cloning' && (
+            <div className="prog-panel">
+              <p className="hero-eyebrow" style={{ marginBottom: 40 }}>Cloning</p>
+              <p className="prog-url">{cloneUrl}</p>
+              <div className="prog-track">
+                <div className="prog-fill" style={{ width: `${progress.percent}%` }} />
+              </div>
+              <div className="prog-status">
+                <span className="prog-spinner" />
+                <span>{progress.message}</span>
               </div>
             </div>
           )}
 
-          {appState === 'cloning' && (
-            <div className="card glass-card">
-              <UrlInput onClone={handleClone} isLoading={true} />
-              <ProgressTracker
-                status={progress.status}
-                message={progress.message}
-                percent={progress.percent}
-                cloneUrl={cloneUrl}
-              />
-            </div>
-          )}
-
-          {appState === 'done' && downloadInfo && (
-            <DownloadCard
-              downloadUrl={downloadInfo.url}
-              filename={downloadInfo.filename}
-              originalUrl={cloneUrl}
-              onReset={handleReset}
-            />
-          )}
-
-          {appState === 'error' && (
-            <div className="card glass-card error-card">
-              <div className="error-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
+          {state === 'done' && downloadInfo && (
+            <div className="done-panel">
+              <p className="done-label">Clone complete</p>
+              <p className="done-site">{hostname}</p>
+              <p className="done-meta">Your project is ready to download.</p>
+              <div className="done-actions">
+                <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+                  </svg>
+                  Preview
+                </a>
+                <a href={fullDownload} download={downloadInfo.filename} className="btn-primary" id="download-zip-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Download ZIP
+                </a>
               </div>
-              <h2 className="error-title">Clone Failed</h2>
-              <p className="error-message">{errorMsg}</p>
-              <div className="error-tips">
-                <p>Common causes:</p>
-                <ul>
-                  <li>Website blocks automated access</li>
-                  <li>Invalid or unreachable URL</li>
-                  <li>Backend server not running</li>
-                </ul>
-              </div>
-              <button onClick={handleReset} className="retry-btn" id="retry-btn">
-                Try Again
+              <button onClick={reset} style={{ marginTop: 24, background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                Clone another →
               </button>
             </div>
           )}
-        </section>
+
+          {state === 'error' && (
+            <div className="err-panel">
+              <p className="err-code">Error</p>
+              <p className="err-msg">Clone failed</p>
+              <p className="err-sub">{errorMsg}</p>
+              <button onClick={reset} className="btn-retry" id="retry-btn">Try again</button>
+            </div>
+          )}
+        </main>
 
         {/* Footer */}
         <footer className="footer">
-          <p>
-            Built with Playwright + Next.js · Visual cloning only ·{' '}
-            <span className="footer-note">Not affiliated with any cloned site</span>
-          </p>
+          <span className="footer-link">Visual clone only</span>
+          <span className="footer-sep">·</span>
+          <span className="footer-link">No affiliation with cloned sites</span>
+          <span className="footer-sep">·</span>
+          <span className="footer-link">Playwright powered</span>
         </footer>
-      </main>
+      </div>
     </>
   );
 }
