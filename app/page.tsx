@@ -123,17 +123,9 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Animated background particles */}
-      <div className="bg-particles" aria-hidden="true">
-        {[...Array(20)].map((_, i) => (
-          <div key={i} className="particle" style={{ '--i': i } as React.CSSProperties} />
-        ))}
-      </div>
-
-      {/* Gradient orbs */}
-      <div className="orb orb-1" aria-hidden="true" />
-      <div className="orb orb-2" aria-hidden="true" />
-      <div className="orb orb-3" aria-hidden="true" />
+      {/* Minimal luxury background */}
+      <div className="bg-ambient" aria-hidden="true" />
+      <div className="noise-overlay" aria-hidden="true" />
 
       <main className="main-layout">
         {/* Header */}

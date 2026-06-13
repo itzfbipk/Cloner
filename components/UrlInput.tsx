@@ -57,62 +57,73 @@ export default function UrlInput({ onClone, isLoading }: UrlInputProps) {
 
   return (
     <form onSubmit={handleSubmit} className="url-form">
-      <div className={`url-input-wrapper ${error ? 'has-error' : ''} ${isLoading ? 'is-loading' : ''}`}>
-        {/* Globe icon */}
-        <div className="url-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-          </svg>
+      <div className="input-container">
+        <div className={`url-input-wrapper ${error ? 'has-error' : ''} ${isLoading ? 'is-loading' : ''}`}>
+          {/* Globe icon */}
+          <div className="url-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+          </div>
+
+          <input
+            ref={inputRef}
+            id="url-input"
+            type="text"
+            value={url}
+            onChange={handleChange}
+            placeholder="https://example.com"
+            disabled={isLoading}
+            className="url-input"
+            autoComplete="off"
+            spellCheck={false}
+            autoFocus
+          />
+
+          <button
+            type="submit"
+            disabled={isLoading || !url.trim()}
+            className="clone-button"
+            id="clone-btn"
+          >
+            {isLoading ? (
+              <span className="btn-content">
+                <span className="spinner" />
+                Cloning...
+              </span>
+            ) : (
+              <span className="btn-content">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+                Clone
+              </span>
+            )}
+          </button>
         </div>
 
-        <input
-          ref={inputRef}
-          id="url-input"
-          type="text"
-          value={url}
-          onChange={handleChange}
-          placeholder="https://example.com"
-          disabled={isLoading}
-          className="url-input"
-          autoComplete="off"
-          spellCheck={false}
-          autoFocus
-        />
-
-        <button
-          type="submit"
-          disabled={isLoading || !url.trim()}
-          className="clone-button"
-          id="clone-btn"
-        >
-          {isLoading ? (
-            <span className="btn-content">
-              <span className="spinner" />
-              Cloning...
-            </span>
-          ) : (
-            <span className="btn-content">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="16 18 22 12 16 6" />
-                <polyline points="8 6 2 12 8 18" />
-              </svg>
-              Clone
-            </span>
-          )}
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'center', color: '#888' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-          <input type="radio" value="nextjs" checked={exportType === 'nextjs'} onChange={() => setExportType('nextjs')} disabled={isLoading} />
-          Next.js App
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-          <input type="radio" value="html" checked={exportType === 'html'} onChange={() => setExportType('html')} disabled={isLoading} />
-          Simple HTML
-        </label>
+        <div className="export-toggle" data-active={exportType}>
+          <div className="toggle-slider" />
+          <button 
+            type="button" 
+            className={`toggle-btn ${exportType === 'nextjs' ? 'active' : ''}`} 
+            onClick={() => setExportType('nextjs')} 
+            disabled={isLoading}
+          >
+            Next.js App
+          </button>
+          <button 
+            type="button" 
+            className={`toggle-btn ${exportType === 'html' ? 'active' : ''}`} 
+            onClick={() => setExportType('html')} 
+            disabled={isLoading}
+          >
+            Simple HTML
+          </button>
+        </div>
       </div>
 
       {error && (
