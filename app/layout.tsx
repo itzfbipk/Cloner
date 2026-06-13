@@ -1,18 +1,27 @@
 import type { Metadata } from 'next';
-import { Inter, DM_Sans } from 'next/font/google';
+import { DM_Sans, Playfair_Display, DM_Mono } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({
+const inter = DM_Sans({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-sans',
   display: 'swap',
+  weight: ['300', '400', '500', '600'],
 });
 
-const dmSans = DM_Sans({
+const dmSans = Playfair_Display({
   subsets: ['latin'],
-  variable: '--font-dm',
+  variable: '--font-serif',
   display: 'swap',
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '700'],
+  style: ['normal', 'italic'],
+});
+
+const dmMono = DM_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+  weight: ['400', '500'],
 });
 
 export const metadata: Metadata = {
@@ -28,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${dmSans.variable}`}>
+    <html lang="en" className={`${inter.variable} ${dmSans.variable} ${dmMono.variable}`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
