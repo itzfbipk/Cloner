@@ -95,11 +95,10 @@ export default function UrlInput({ onClone, isLoading }: UrlInputProps) {
               </span>
             ) : (
               <span className="btn-content">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="16 18 22 12 16 6" />
-                  <polyline points="8 6 2 12 8 18" />
-                </svg>
                 Clone
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
               </span>
             )}
           </button>
@@ -135,9 +134,6 @@ export default function UrlInput({ onClone, isLoading }: UrlInputProps) {
         </p>
       )}
 
-      <p className="url-hint">
-        Supports any public website — single-page or multi-page
-      </p>
     </form>
   );
 }

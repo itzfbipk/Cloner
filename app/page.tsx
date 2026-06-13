@@ -155,12 +155,10 @@ export default function HomePage() {
             Zero API keys required
           </div>
           <h1 id="hero-heading" className="hero-title">
-            Clone Any Website
-            <span className="hero-title-gradient"> Instantly</span>
+            Copy any website.
           </h1>
           <p className="hero-subtitle">
-            Paste a URL, get a fully functional Next.js + TypeScript + Tailwind project.
-            No signup. No API key. Just paste and clone.
+            Transform any public URL into a clean, functional Next.js or HTML codebase in seconds.
           </p>
         </section>
 
@@ -170,17 +168,13 @@ export default function HomePage() {
             <div className="card glass-card">
               <UrlInput onClone={handleClone} isLoading={false} />
               <div className="features-row">
-                {[
-                  { icon: '🎨', label: 'Full CSS & Styles' },
-                  { icon: '🖼️', label: 'Images & Assets' },
-                  { icon: '📄', label: 'Multi-page' },
-                  { icon: '📦', label: 'ZIP Export' },
-                ].map((f) => (
-                  <div key={f.label} className="feature-chip">
-                    <span>{f.icon}</span>
-                    <span>{f.label}</span>
-                  </div>
-                ))}
+                <span className="feature-chip">Full CSS & Styles</span>
+                <span className="feature-chip" style={{ opacity: 0.3 }}>•</span>
+                <span className="feature-chip">Images & Assets</span>
+                <span className="feature-chip" style={{ opacity: 0.3 }}>•</span>
+                <span className="feature-chip">Multi-page</span>
+                <span className="feature-chip" style={{ opacity: 0.3 }}>•</span>
+                <span className="feature-chip">ZIP Export</span>
               </div>
             </div>
           )}
