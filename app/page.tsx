@@ -115,7 +115,6 @@ export default function HomePage() {
         <main className="hero">
           {state === 'idle' && (
             <>
-              <p className="hero-eyebrow">Playwright · Next.js · TypeScript</p>
               <h1 className="hero-title">
                 Clone any<br /><em>website.</em>
               </h1>
