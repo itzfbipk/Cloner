@@ -42,7 +42,7 @@ export default function HomePage() {
     return cleanup;
   }, [cleanup]);
 
-  async function handleClone(url: string) {
+  async function handleClone(url: string, exportType: 'nextjs' | 'html') {
     cleanup();
     setCloneUrl(url);
     setAppState('cloning');
@@ -55,7 +55,7 @@ export default function HomePage() {
       const response = await fetch(`${BACKEND_URL}/clone`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, exportType }),
       });
 
       if (!response.ok) {

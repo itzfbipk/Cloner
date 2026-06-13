@@ -3,12 +3,13 @@
 import { useState, useRef } from 'react';
 
 interface UrlInputProps {
-  onClone: (url: string) => void;
+  onClone: (url: string, exportType: 'nextjs' | 'html') => void;
   isLoading: boolean;
 }
 
 export default function UrlInput({ onClone, isLoading }: UrlInputProps) {
   const [url, setUrl] = useState('');
+  const [exportType, setExportType] = useState<'nextjs' | 'html'>('nextjs');
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -46,7 +47,7 @@ export default function UrlInput({ onClone, isLoading }: UrlInputProps) {
     } catch {
       finalUrl = 'https://' + trimmed;
     }
-    onClone(finalUrl);
+    onClone(finalUrl, exportType);
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -101,6 +102,17 @@ export default function UrlInput({ onClone, isLoading }: UrlInputProps) {
             </span>
           )}
         </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'center', color: '#888' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <input type="radio" value="nextjs" checked={exportType === 'nextjs'} onChange={() => setExportType('nextjs')} disabled={isLoading} />
+          Next.js App
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <input type="radio" value="html" checked={exportType === 'html'} onChange={() => setExportType('html')} disabled={isLoading} />
+          Simple HTML
+        </label>
       </div>
 
       {error && (
