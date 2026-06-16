@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Playground, SiteData } from '@/components/Playground';
 
 type AppState = 'idle' | 'cloning' | 'done' | 'error';
 
@@ -19,6 +20,7 @@ export default function HomePage() {
   const [progress, setProgress] = useState<ProgressState>({ status: 'queued', message: '', percent: 0 });
   const [cloneUrl, setCloneUrl] = useState('');
   const [downloadInfo, setDownloadInfo] = useState<{ url: string; filename: string } | null>(null);
+  const [siteData, setSiteData] = useState<SiteData | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [fieldError, setFieldError] = useState('');
   const esRef = useRef<EventSource | null>(null);
@@ -66,9 +68,21 @@ export default function HomePage() {
       const es = new EventSource(`${BACKEND}/clone/${jobId}/stream`);
       esRef.current = es;
       es.addEventListener('progress', (e: MessageEvent) => setProgress(JSON.parse(e.data)));
-      es.addEventListener('complete', (e: MessageEvent) => {
+      es.addEventListener('complete', async (e: MessageEvent) => {
         const d = JSON.parse(e.data) as { downloadUrl: string; filename: string };
         setDownloadInfo({ url: d.downloadUrl, filename: d.filename });
+        
+        // Fetch playground data
+        try {
+          const dataRes = await fetch(`${BACKEND}/clone/${jobId}/data`);
+          if (dataRes.ok) {
+            const parsedData = await dataRes.json();
+            setSiteData(parsedData);
+          }
+        } catch (e) {
+          console.error("Failed to fetch playground data", e);
+        }
+
         setState('done'); cleanup();
       });
       es.addEventListener('error', (e: MessageEvent | Event) => {
@@ -88,7 +102,7 @@ export default function HomePage() {
 
   function reset() {
     cleanup(); setState('idle'); setUrl(''); setCloneUrl('');
-    setDownloadInfo(null); setErrorMsg(''); setFieldError('');
+    setDownloadInfo(null); setSiteData(null); setErrorMsg(''); setFieldError('');
     setProgress({ status: 'queued', message: '', percent: 0 });
   }
 
@@ -197,28 +211,32 @@ export default function HomePage() {
           )}
 
           {state === 'done' && downloadInfo && (
-            <div className="done-panel">
-              <p className="done-label">Clone complete</p>
-              <p className="done-site">{hostname}</p>
-              <p className="done-meta">Your project is ready to download.</p>
-              <div className="done-actions">
-                <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
-                  </svg>
-                  Preview
-                </a>
-                <a href={fullDownload} download={downloadInfo.filename} className="btn-primary" id="download-zip-btn">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Download ZIP
-                </a>
+            siteData ? (
+              <Playground 
+                data={siteData} 
+                downloadUrl={fullDownload} 
+                filename={downloadInfo.filename} 
+                previewUrl={previewUrl} 
+                onReset={reset} 
+              />
+            ) : (
+              <div className="done-panel">
+                <p className="done-label">Clone complete</p>
+                <p className="done-site">{hostname}</p>
+                <p className="done-meta">Your project is ready to download.</p>
+                <div className="done-actions">
+                  <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+                    Preview
+                  </a>
+                  <a href={fullDownload} download={downloadInfo.filename} className="btn-primary">
+                    Download ZIP
+                  </a>
+                </div>
+                <button onClick={reset} style={{ marginTop: 24, background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'var(--font)' }}>
+                  Clone another →
+                </button>
               </div>
-              <button onClick={reset} style={{ marginTop: 24, background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'var(--font)' }}>
-                Clone another →
-              </button>
-            </div>
+            )
           )}
 
           {state === 'error' && (
