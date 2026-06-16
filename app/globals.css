@@ -547,3 +547,230 @@ body {
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
+
+/* ─── Playground UI ──────────────────────────────────────────────────────────── */
+
+.playground-container {
+  width: 100%;
+  max-width: 900px;
+  background: #080808;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  margin-top: 20px;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.playground-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,0.01);
+}
+
+.playground-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-2);
+  font-size: 0.9rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+}
+
+.playground-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.playground-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  padding: 0 16px;
+  gap: 24px;
+  background: rgba(255,255,255,0.005);
+}
+
+.playground-tabs button {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  padding: 16px 8px;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  margin-bottom: -1px;
+}
+
+.playground-tabs button:hover {
+  color: var(--text-2);
+}
+
+.playground-tabs button.active {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+.playground-content {
+  padding: 32px;
+  min-height: 400px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.pg-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.pg-screenshot {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #111;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.pg-screenshot img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.no-screenshot {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.pg-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.pg-stat-box {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.pg-stat-box:hover {
+  background: rgba(255,255,255,0.03);
+  transform: translateY(-2px);
+}
+
+.pg-stat-val {
+  font-family: var(--font-serif);
+  font-size: 2.5rem;
+  color: #fff;
+  line-height: 1;
+}
+
+.pg-stat-lbl {
+  color: var(--text-3);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+.pg-html pre {
+  background: #111;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.pg-assets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+}
+
+.asset-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #111;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.asset-item:hover {
+  border-color: var(--border-lit);
+  transform: translateY(-2px);
+}
+
+.asset-item img {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  border-bottom: 1px solid var(--border);
+  background: #000;
+}
+
+.asset-icon {
+  width: 100%;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  color: var(--text-3);
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.asset-name {
+  padding: 10px;
+  font-size: 0.75rem;
+  color: var(--text-2);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+}
