@@ -20,7 +20,7 @@ interface PlaygroundProps {
 }
 
 export function Playground({ data, downloadUrl, filename, previewUrl, onReset }: PlaygroundProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'html' | 'assets'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'summary' | 'assets'>('overview');
 
   return (
     <div className="playground-container">
@@ -44,7 +44,7 @@ export function Playground({ data, downloadUrl, filename, previewUrl, onReset }:
       {/* Tabs */}
       <div className="playground-tabs">
         <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>Overview</button>
-        <button className={activeTab === 'html' ? 'active' : ''} onClick={() => setActiveTab('html')}>HTML ({data.pages.length})</button>
+        <button className={activeTab === 'summary' ? 'active' : ''} onClick={() => setActiveTab('summary')}>Summary</button>
         <button className={activeTab === 'assets' ? 'active' : ''} onClick={() => setActiveTab('assets')}>Assets ({data.assets.length + data.jsFiles.length})</button>
       </div>
 
@@ -77,11 +77,24 @@ export function Playground({ data, downloadUrl, filename, previewUrl, onReset }:
           </div>
         )}
 
-        {activeTab === 'html' && (
-          <div className="pg-html">
-            <pre>
-              <code>{data.pages[0]?.bodyHtml}</code>
-            </pre>
+        {activeTab === 'summary' && (
+          <div className="pg-summary">
+            <div className="summary-card">
+              <h3>What we did</h3>
+              <p>
+                Successfully extracted <strong>{data.pages.length}</strong> pages from <code>{data.baseUrl}</code>.
+                We downloaded <strong>{data.assets.length}</strong> styles and images, and captured <strong>{data.jsFiles.length}</strong> JavaScript files.
+                All of this was packaged into a ready-to-run ZIP archive.
+              </p>
+            </div>
+            <div className="summary-card" style={{ marginTop: '24px' }}>
+              <h3>Site Summary</h3>
+              <div className="site-meta">
+                <strong>Title:</strong> {data.pages[0]?.title || 'Unknown Title'}
+                <br /><br />
+                <strong>Description:</strong> {data.pages[0]?.bodyHtml.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i)?.[1] || 'No meta description found on the site.'}
+              </div>
+            </div>
           </div>
         )}
 

@@ -708,16 +708,54 @@ body {
   font-weight: 500;
 }
 
-.pg-html pre {
-  background: #111;
-  padding: 20px;
-  border-radius: 12px;
+.pg-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.summary-card {
+  background: rgba(255,255,255,0.02);
   border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.summary-card h3 {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--text-1);
+  margin-bottom: 12px;
+}
+
+.summary-card p {
   color: var(--text-2);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.summary-card strong {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.summary-card code {
+  background: #111;
+  padding: 2px 6px;
+  border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 0.85rem;
-  overflow-x: auto;
-  white-space: pre-wrap;
+  border: 1px solid var(--border);
+}
+
+.site-meta {
+  background: #111;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 0.9rem;
   line-height: 1.5;
 }
 
