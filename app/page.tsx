@@ -11,7 +11,7 @@ interface ProgressState {
   percent: number;
 }
 
-const BACKEND = 'https://akiiiiwa-backend.hf.space';
+const BACKEND = 'https://akiiiiwa-ai-cloner-backend.hf.space';
 
 export default function HomePage() {
   const [state, setState] = useState<AppState>('idle');
