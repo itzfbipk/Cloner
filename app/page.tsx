@@ -11,7 +11,7 @@ interface ProgressState {
   percent: number;
 }
 
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const BACKEND = 'https://akiiiiwa-backend.hf.space';
 
 export default function HomePage() {
   const [state, setState] = useState<AppState>('idle');
