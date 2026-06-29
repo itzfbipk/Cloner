@@ -16,13 +16,18 @@ const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 export default function HomePage() {
   const [state, setState] = useState<AppState>('idle');
   const [url, setUrl] = useState('');
-  const [exportType, setExportType] = useState<'nextjs' | 'html'>('nextjs');
+  const [exportType, setExportType] = useState<'nextjs' | 'html'>('html');
   const [progress, setProgress] = useState<ProgressState>({ status: 'queued', message: '', percent: 0 });
   const [cloneUrl, setCloneUrl] = useState('');
   const [downloadInfo, setDownloadInfo] = useState<{ url: string; filename: string } | null>(null);
   const [siteData, setSiteData] = useState<SiteData | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [fieldError, setFieldError] = useState('');
+  
+  // Advanced options state
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [sessionInput, setSessionInput] = useState('');
+
   const esRef = useRef<EventSource | null>(null);
 
   const cleanup = useCallback(() => {
@@ -49,6 +54,68 @@ export default function HomePage() {
     setFieldError('');
     const finalUrl = trimmed.startsWith('http') ? trimmed : 'https://' + trimmed;
 
+    let customHeaders: Record<string, string> | undefined;
+    let localStorageData: Record<string, string> | undefined;
+
+    if (sessionInput.trim()) {
+      const trimmedInput = sessionInput.trim();
+      const headers: Record<string, string> = {};
+      const lsData: Record<string, string> = {};
+      
+      try {
+        // Try parsing as JSON first
+        const parsed = JSON.parse(trimmedInput);
+        if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+          Object.assign(lsData, parsed);
+          // Also inject JSON keys as cookies just to be safe
+          const cookieParts = Object.entries(parsed).map(([k, v]) => `${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`);
+          headers['Cookie'] = cookieParts.join('; ');
+        } else {
+          throw new Error('Not an object');
+        }
+      } catch {
+        // Fallback: Parse line-by-line for HTTP headers or raw cookies
+        const lines = trimmedInput.split('\n');
+        const cookieParts: string[] = [];
+        
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          
+          const colonIdx = line.indexOf(':');
+          const potentialKey = colonIdx > 0 ? line.substring(0, colonIdx).trim() : '';
+          const isValidHeader = colonIdx > 0 && !potentialKey.includes('=') && !potentialKey.includes(' ');
+          
+          if (isValidHeader) {
+            // It's a standard header (e.g. "Authorization: Bearer ...")
+            const key = potentialKey;
+            const val = line.substring(colonIdx + 1).trim();
+            if (key && val) headers[key] = val;
+          } else {
+            // It's a raw cookie string or Key=Value pair
+            cookieParts.push(line.trim());
+            
+            // Also blindly extract Key=Value pairs into LocalStorage to cover all bases!
+            const pairs = line.split(';');
+            for (const pair of pairs) {
+              const eqIdx = pair.indexOf('=');
+              if (eqIdx > 0) {
+                const k = pair.substring(0, eqIdx).trim();
+                const v = pair.substring(eqIdx + 1).trim();
+                if (k) lsData[k] = v;
+              }
+            }
+          }
+        }
+        
+        if (cookieParts.length > 0) {
+          headers['Cookie'] = cookieParts.join('; ');
+        }
+      }
+      
+      if (Object.keys(lsData).length > 0) localStorageData = lsData;
+      if (Object.keys(headers).length > 0) customHeaders = headers;
+    }
+
     cleanup();
     setCloneUrl(finalUrl);
     setState('cloning');
@@ -58,7 +125,7 @@ export default function HomePage() {
       const res = await fetch(`${BACKEND}/clone`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: finalUrl, exportType }),
+        body: JSON.stringify({ url: finalUrl, exportType, customHeaders, localStorageData }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -69,6 +136,7 @@ export default function HomePage() {
       esRef.current = es;
       es.addEventListener('progress', (e: MessageEvent) => setProgress(JSON.parse(e.data)));
       es.addEventListener('complete', async (e: MessageEvent) => {
+        cleanup(); // Close EventSource immediately so dropped connection doesn't trigger an error event
         const d = JSON.parse(e.data) as { downloadUrl: string; filename: string };
         setDownloadInfo({ url: d.downloadUrl, filename: d.filename });
         
@@ -83,7 +151,7 @@ export default function HomePage() {
           console.error("Failed to fetch playground data", e);
         }
 
-        setState('done'); cleanup();
+        setState('done');
       });
       es.addEventListener('error', (e: MessageEvent | Event) => {
         let msg = 'Unexpected error';
@@ -152,9 +220,10 @@ export default function HomePage() {
                       spellCheck={false}
                     />
                     <button type="submit" className="go-btn" id="clone-btn">
-                      Clone
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      Clone Site
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                        <path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>
                       </svg>
                     </button>
                   </div>
@@ -170,6 +239,26 @@ export default function HomePage() {
                     HTML
                   </button>
                 </div>
+
+                <div className="advanced-toggle" onClick={() => setShowAdvanced(!showAdvanced)}>
+                  <span className="advanced-icon">{showAdvanced ? '▼' : '▶'}</span> Advanced Options (Authentication)
+                </div>
+
+                {showAdvanced && (
+                  <div className="advanced-panel">
+                    <p className="advanced-desc">Scrape a private dashboard by pasting your active session tokens below.</p>
+                    <label className="advanced-label">
+                      Session Data (Paste Cookies, Headers, or LocalStorage JSON)
+                      <textarea 
+                        className="advanced-textarea"
+                        placeholder={'PHPSESSID=123...\nor\n{\n  "auth_token": "abc"\n}'}
+                        value={sessionInput}
+                        onChange={e => setSessionInput(e.target.value)}
+                        spellCheck={false}
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div className="stats-row">
